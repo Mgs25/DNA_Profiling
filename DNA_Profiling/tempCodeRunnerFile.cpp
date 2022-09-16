@@ -1,3 +1,0 @@
-
-        // DisplayOurVector(person.StrCount, ' ');
-        // cout << "**********************";

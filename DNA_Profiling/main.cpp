@@ -44,10 +44,14 @@ void PopulateStrs(ourvector<ShortTandemRepeat> &, const string &);
 void PopulateIndividuals(ourvector<Individual> &, const string &);
 string GetNthLine(const string &, int);
 
+int GetStrCount(ourvector<ShortTandemRepeat>, DNA);
+
 // Command based functions
-void loadDb(const string &, ourvector<ShortTandemRepeat> &, ourvector<Individual> &);
-void loadDna(const string &, DNA &);
-void display(ourvector<Individual>, DNA);
+void LoadDb(const string &, ourvector<ShortTandemRepeat> &, ourvector<Individual> &);
+void LoadDna(const string &, DNA &);
+void Display(ourvector<Individual>, DNA);
+ourvector<int> Process(ourvector<ShortTandemRepeat>, DNA);
+ourvector<char> Search(ourvector<Individual>, ourvector<int>);
 
 int main()
 {
@@ -55,6 +59,8 @@ int main()
 
     ourvector<ShortTandemRepeat> strList; // List of STRs on the first line
     ourvector<Individual> individuals;    // List of individuals with name and str count
+    ourvector<int> processedStrCount;
+    ourvector<char> matchedPerson;
     DNA dna;
 
     cout << "Welcome to the DNA Profiling Application" << endl;
@@ -78,21 +84,62 @@ int main()
             strList.clear();
             individuals.clear();
 
-            loadDb(cmdParams, strList, individuals); // loads content from db to dbContent string, then populates strList and individuals
+            LoadDb(cmdParams, strList, individuals); // loads content from db to dbContent string, then populates strList and individuals
         }
         else if (cmdType == CMD_CONSTANTS::DNA_LOAD)
         {
-            loadDna(cmdParams, dna);
+            cout << "Loading DNA..." << endl;
+            LoadDna(cmdParams, dna);
         }
         else if (cmdType == CMD_CONSTANTS::DISPLAY)
         {
-            display(individuals, dna);
+            Display(individuals, dna);
         }
         else if (cmdType == CMD_CONSTANTS::PROCESS)
         {
+            if (individuals.size() == 0 || strList.size() == 0)
+            {
+                cout << "No database loaded." << endl;
+            }
+            else if (dna.size() == 0)
+            {
+                cout << "No DNA loaded." << endl;
+            }
+            else
+            {
+                processedStrCount = Process(strList, dna);
+            }
         }
         else if (cmdType == CMD_CONSTANTS::SEARCH)
         {
+            if (individuals.size() == 0 || strList.size() == 0)
+            {
+                cout << "No database loaded." << endl;
+            }
+            else if (dna.size() == 0)
+            {
+                cout << "No DNA loaded." << endl;
+            }
+            else if (processedStrCount.size() == 0)
+            {
+                cout << "No DNA processed." << endl;
+            }
+            else
+            {
+                cout << "Searching database..." << endl;
+                matchedPerson = Search(individuals, processedStrCount);
+
+                if (matchedPerson.size() != 0)
+                {
+                    cout << "DNA matches: ";
+                    DisplayOurVector(matchedPerson);
+                    cout << endl;
+                }
+                else
+                {
+                    cout << "Not found in database." << endl;
+                }
+            }
         }
     } while (command != "#");
 
@@ -152,6 +199,29 @@ string GetNthLine(const string &dbContent, int lineNumber)
     return line;
 }
 
+int GetStrCount(ShortTandemRepeat str, DNA dna) // TODO
+{
+    int totalCount = 0;
+    // Using naive approach - O(m * n) => O(length of str * length of dna)
+    for (int i = 0; i < dna.size(); i++)
+    {
+        int j;
+        for (j = 0; j < str.size(); j++)
+        {
+            if (dna[i + j] != str[j])
+            {
+                break;
+            }
+        }
+        if (j == str.size())
+        {
+            totalCount++;
+        }
+    }
+
+    return totalCount;
+}
+
 void PopulateStrs(ourvector<ShortTandemRepeat> &strList, const string &dbContent)
 {
     string firstLine = GetNthLine(dbContent, 0);
@@ -209,7 +279,7 @@ void PopulateIndividuals(ourvector<Individual> &individuals, const string &dbCon
     }
 }
 
-void loadDb(const string &fileName, ourvector<ShortTandemRepeat> &strList, ourvector<Individual> &individuals)
+void LoadDb(const string &fileName, ourvector<ShortTandemRepeat> &strList, ourvector<Individual> &individuals)
 {
     try
     {
@@ -225,7 +295,7 @@ void loadDb(const string &fileName, ourvector<ShortTandemRepeat> &strList, ourve
     }
 }
 
-void loadDna(const string &fileName, DNA &dna)
+void LoadDna(const string &fileName, DNA &dna)
 {
     try
     {
@@ -243,7 +313,7 @@ void loadDna(const string &fileName, DNA &dna)
     }
 }
 
-void display(ourvector<Individual> individuals, DNA dna)
+void Display(ourvector<Individual> individuals, DNA dna)
 {
     if (individuals.size() != 0)
     {
@@ -257,11 +327,13 @@ void display(ourvector<Individual> individuals, DNA dna)
             cout << endl;
         }
 
-        cout << endl << endl;
+        cout << endl
+             << endl;
     }
     else
     {
-        cout << "No database loaded." << endl << endl;
+        cout << "No database loaded." << endl
+             << endl;
     }
 
     if (dna.size() != 0)
@@ -270,10 +342,47 @@ void display(ourvector<Individual> individuals, DNA dna)
 
         DisplayOurVector(dna);
 
-        cout << endl << endl;
+        cout << endl
+             << endl;
     }
     else
     {
-        cout << "No DNA loaded." << endl << endl;
+        cout << "No DNA loaded." << endl
+             << endl;
     }
+}
+
+ourvector<int> Process(ourvector<ShortTandemRepeat> strList, DNA dna)
+{
+    ourvector<int> processedCount;
+
+    for (auto str : strList)
+    {
+        int currentStrCount = GetStrCount(str, dna);
+        processedCount.push_back(currentStrCount);
+    }
+
+    return processedCount;
+}
+
+ourvector<char> Search(ourvector<Individual> individuals, ourvector<int> strCount)
+{
+    for (auto person: individuals)
+    {
+        // check if person str count matches the dna str count
+        bool isMatch = true;
+        for (int i = 0; i < strCount.size(); i++)
+        {
+            if (person.StrCount[i] != strCount[i])
+            {
+                isMatch = false;
+                break;
+            }
+        }
+
+        if (isMatch)
+            return person.Name;
+    }
+
+    return ourvector<char>();
 }
